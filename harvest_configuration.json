@@ -1,0 +1,69 @@
+{
+    "Harvest ID":"Testing",
+    "Theories":[
+        {
+            "ToC":"global neuronal workspace", 
+            "Key Papers":[
+                "Towards a cognitive neuroscience of consciousness basic evidence and a workspace framework",
+                "Conscious, preconscious, and subliminal processing: a testable taxonomy",
+                "Experimental and Theoretical Approaches to Conscious Processing"
+            ]
+        },
+        {
+            "ToC":"higher order thought", 
+            "Key Papers":[
+                "Higher-order thoughts and the appendage theory of consciousness",
+                "Consciousness: the radical plasticity thesis",
+                "Empirical support for higher-order theories of conscious awareness"
+            ]
+        },
+        {
+            "ToC":"integrated information theory", 
+            "Key Papers":[
+                "An information integration theory of consciousness",
+                "The Integrated Information Theory of Consciousness An Updated Account",
+                "Integrated information theory from consciousness to its physical substrate"
+            ]
+        },
+        {
+            "ToC":"recurrent processing", 
+            "Key Papers":[
+                "The distinct modes of vision offered by feedforward and recurrent processing",
+                "Two distinct modes of sensory processing observed in monkey primary visual cortex",
+                "Towards a true neural stance on consciousness"
+            ]
+        }
+    ],
+    "Publication Years":[[2021, 2022]],
+
+    "Methodologies":[
+        "fMRI", "MEG", "EEG", "ECoG", "intracranial", "TMS", "imaging", "PET", 
+        "electrophysiology", "iEEG", "ERP", "neuroimaging", "single units", "multi units"
+    ],
+    "DOI":[
+        "10.3389/fnins.2022.756651",
+        "10.1093/nc/niac005",
+        "10.1038/s41598-022-08975-7",
+        "10.3389/fpsyg.2022.911620",
+        "10.3389/fnsys.2022.941534"
+    ],
+    "Subject Areas":[
+        "MULT", 
+        "MEDI", "NURS", "VETE", "DENT", "HEAL", 
+        "AGRI", "BIOC", "IMMU", "NEUR", "PHAR",
+        "CENG", "CHEM", "COMP", "EART", "ENER", "ENGI", "ENVI", "MATE", "MATH", "PHYS",
+        "ARTS", "BUSI", "DECI", "ECON", "PSYC", "SOCI"
+    ],
+    "Chosen Subject Areas":["PSYC", "NEUR", "MULT"],
+
+    "Search Columns":[
+        "Title", "DOI", "Authors", "Source Title", "Publication Year",
+        "Author Keywords", "Index Keywords", "Affiliations",
+        "Cited By", "Scopus Link", "Abstract", "Funding Details",
+        "References", "Publisher", "Abbreviated Source Title"
+    ],
+    "Harvest Columns":["Harvest ID", "Harvest Datetime"],
+    "Search Type Columns":["ToC", "Key Paper"],
+    "Notes Columns":["Notes", "Specific Notes", "Included"],
+    "Filter Columns":["search", "lang", "subtype", "area", "methodology", "doi"]
+}
