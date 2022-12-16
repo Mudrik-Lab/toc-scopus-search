@@ -4,8 +4,7 @@ import json
 import shutil
 from pathlib import Path
 import pandas as pd
-from pybliometrics.scopus import ScopusSearch, AbstractRetrieval, SubjectClassifications
-
+from pybliometrics.scopus import ScopusSearch, AbstractRetrieval
 
 
 def _filter_by_subject_areas(abstracts, subject_areas, subject_areas_chosen):
@@ -31,6 +30,9 @@ def _filter_by_methodologies(abstracts, methodologies):
     is in abstract, author keywords or index keywords.
     """
 
+    if not methodologies:
+        return abstracts
+
     new_abstracts = []
     for ab in abstracts:
         # If any of methodologies is found inside abstract or keywords - include the abstract.
@@ -41,8 +43,7 @@ def _filter_by_methodologies(abstracts, methodologies):
                     None, 
                     (
                         ab.abstract, 
-                        ab.authkeywords, 
-                        ab.idxterms
+                        ab.authkeywords
                     )
                 )
             )
@@ -54,7 +55,11 @@ def _retrieve_abstracts(eids):
     """ Retrieves abstracts by using Scopus Abstract Retrieval API. """
 
     # For every provided eid retrieve an abstract
-    return [AbstractRetrieval(eid, view='FULL') for eid in eids]
+    try:
+        abstracts = [AbstractRetrieval(eid, view='FULL') for eid in eids]
+    except Exception as err:
+        raise Exception('Something went wrong while retrieving abstracts, please contact Scopus') from err
+    return abstracts
 
 def _filter_abstracts(abstracts, subject_areas, subject_areas_chosen, methodologies, filter_columns, dois):
     """ Filters abstracts by language, document type, subject areas, methodologies, dois.
@@ -103,7 +108,10 @@ def _main_search(theory, paper, publication_years):
     query = ' AND '.join(fields.values())
 
     # Search by the query
-    scopus_search = ScopusSearch(query, verbose=True)
+    try:
+        scopus_search = ScopusSearch(query, verbose=True)
+    except Exception as err:
+        raise Exception('Something went wrong while performing ScopusSearch, please contact Scopus') from err
 
     return scopus_search
 
@@ -126,8 +134,6 @@ def _process_abstracts(abstracts, search, search_df):
             ab.coverDate[:4] if ab.coverDate else 'NA',
             # Paper Author Keywords
             '; '.join(ab.authkeywords) if ab.authkeywords else 'NA',
-            # Paper Index Keywords
-            'Here, hopefully, will be idxterms',
             # Authors Affiliations
             '; '.join(', '.join(filter(None, [aff.name, aff.city, aff.country])) for aff in ab.affiliation) if ab.affiliation else 'NA',
             # Paper Cited By
@@ -160,17 +166,20 @@ def search_by(
     """
 
     # Load parameters from the config
-    publication_years = config['Publication Years']
-    subject_areas = config['Subject Areas']
-    subject_areas_chosen = config['Chosen Subject Areas']
-    harvest_id = config['Harvest ID']
-    search_columns = config['Search Columns']
-    harvest_columns = config['Harvest Columns']
-    search_type_columns = config['Search Type Columns']
-    notes_columns = config['Notes Columns']
-    filter_columns = config['Filter Columns']
-    methodologies = config['Methodologies']
-    dois = config['DOI']
+    try:
+        publication_years = config['Publication Years']
+        subject_areas = config['Subject Areas'].keys()
+        subject_areas_chosen = config['Chosen Subject Areas'].keys()
+        harvest_id = config['Harvest ID']
+        search_columns = config['Search Columns']
+        harvest_columns = config['Harvest Columns']
+        search_type_columns = config['Search Type Columns']
+        notes_columns = config['Notes Columns']
+        filter_columns = config['Filter Columns']
+        methodologies = config['Methodologies']
+        dois = config['DOIs to exclude']
+    except KeyError as err:
+        raise Exception(f'Please make sure there is a "{err.args[0]}" field in the configuration file') from err
 
     scopus_search = _main_search(theory, paper, publication_years)
     abstracts = _retrieve_abstracts(scopus_search.get_eids())
@@ -192,37 +201,38 @@ def search_by(
 def main(path_to_json):
     """ Main
     """
-    # Check the file exists
+    # Check the config file exists
     json_path = Path(path_to_json)
     assert json_path.is_file
 
     # Record datetime
     harvest_start_time = datetime.datetime.now()
 
+    # Load the config file
     with open(json_path, 'r') as json_file:
         config = json.load(json_file)
     
-    theories = {theory_item['ToC']: theory_item['Key Papers'] for theory_item in config['Theories']}
-    subject_areas = config['Subject Areas']
+    # Load the configuration data
+    try:
+        theories = {theory_item['ToC']: theory_item['Key Papers'] for theory_item in config['Theories']}
+        subject_areas = config['Subject Areas']
+        search_columns = config['Search Columns']
+        harvest_columns = config['Harvest Columns']
+        search_type_columns = config['Search Type Columns']
+        notes_columns = config['Notes Columns']
+        filter_columns = config['Filter Columns']
+    except KeyError as err:
+        raise Exception(f'Please make sure there is a "{err.args[0]}" field in the configuration file') from err
 
-    search_columns = config['Search Columns']
-    harvest_columns = config['Harvest Columns']
-    search_type_columns = config['Search Type Columns']
-    notes_columns = config['Notes Columns']
     columns = [
-        *harvest_columns,
-        *search_columns,
-        *search_type_columns,
-        *notes_columns
-    ]
-    filter_columns = config['Filter Columns']
-
-    # Get full names for subject areas from their abbreviations
-    areas_description = {area: SubjectClassifications({'abbrev': area}).results[0].description for area in subject_areas}
-
+            *harvest_columns,
+            *search_columns,
+            *search_type_columns,
+            *notes_columns
+        ]
     results_df = pd.DataFrame(columns=columns)
     counts_df = pd.DataFrame(columns=search_type_columns+filter_columns)
-    areas_df = pd.DataFrame(columns=search_type_columns+list(areas_description.values()))
+    areas_df = pd.DataFrame(columns=search_type_columns+list(subject_areas.values()))
     
 
     for theory, key_papers in theories.items():
@@ -230,7 +240,7 @@ def main(path_to_json):
         # Search by theory
         search_results_df, papers_count, areas = search_by(config, harvest_start_time, theory)
         # Translate subject area abbreviation to the full name.
-        areas = {areas_description[area]: count for area, count in areas.items()}
+        areas = {subject_areas[area]: count for area, count in areas.items()}
         # Add results from the search to the main dataframe.
         results_df = pd.concat([results_df, search_results_df], axis=0, ignore_index=True)
         # Add search type column names to the counts dict.
@@ -247,7 +257,7 @@ def main(path_to_json):
             # Search by key paper
             search_results_df, papers_count, areas = search_by(config, harvest_start_time, theory, paper)
             # Translate subject area abbreviation to the full name.
-            areas = {areas_description[area]: count for area, count in areas.items()}
+            areas = {subject_areas[area]: count for area, count in areas.items()}
             # Add results from the search to the main dataframe.
             results_df = pd.concat([results_df, search_results_df], axis=0, ignore_index=True)
             # Add search type column names to the counts dict.
@@ -261,15 +271,19 @@ def main(path_to_json):
 
     # Remove DOI duplicates for the summary dataframe
     summary_df = results_df.drop_duplicates(subset=['DOI'])[search_columns+notes_columns]
-
+    
+    # Create results directory
+    results_path = Path('results')
+    results_path.mkdir(exist_ok=True)
+    suffix = '.csv'
     # Write dataframes to csv
-    summary_df.to_csv(f'{harvest_start_time.strftime("summary_%d_%m_%Y")}.csv', index=False, quoting=csv.QUOTE_NONNUMERIC)
-    results_df.to_csv(f'{harvest_start_time.strftime("scopus_search_%d_%m_%Y")}.csv', index=False, quoting=csv.QUOTE_NONNUMERIC)
-    counts_df.to_csv(f'{harvest_start_time.strftime("counts_%d_%m_%Y")}.csv', index=False, quoting=csv.QUOTE_NONNUMERIC)
-    areas_df.to_csv(f'{harvest_start_time.strftime("areas_%d_%m_%Y")}.csv', index=False, quoting=csv.QUOTE_NONNUMERIC)
+    summary_df.to_csv((results_path/harvest_start_time.strftime("summary_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
+    results_df.to_csv((results_path/harvest_start_time.strftime("scopus_search_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
+    counts_df.to_csv((results_path/harvest_start_time.strftime("counts_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
+    areas_df.to_csv((results_path/harvest_start_time.strftime("areas_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
 
     # Copy the configuration file
-    shutil.copyfile(path_to_json, f'harvest_configuration_{config["Harvest ID"]}_{harvest_start_time.strftime("%d_%m_%Y")}.json')
+    shutil.copyfile(path_to_json, results_path/f'harvest_configuration_{config["Harvest ID"]}_{harvest_start_time.strftime("%d_%m_%Y")}.json')
 
 if __name__ == '__main__':
     main('harvest_configuration.json')

@@ -1,5 +1,6 @@
 {
     "Harvest ID":"Testing",
+
     "Theories":[
         {
             "ToC":"global neuronal workspace", 
@@ -21,7 +22,7 @@
             "ToC":"integrated information theory", 
             "Key Papers":[
                 "An information integration theory of consciousness",
-                "The Integrated Information Theory of Consciousness An Updated Account",
+                "Integrated Information Theory of Consciousness An Updated Account",
                 "Integrated information theory from consciousness to its physical substrate"
             ]
         },
@@ -34,34 +35,65 @@
             ]
         }
     ],
+
     "Publication Years":[[2021, 2022]],
 
     "Methodologies":[
         "fMRI", "MEG", "EEG", "ECoG", "intracranial", "TMS", "imaging", "PET", 
         "electrophysiology", "iEEG", "ERP", "neuroimaging", "single units", "multi units"
     ],
-    "DOI":[
+
+    "DOIs to exclude":[
         "10.3389/fnins.2022.756651",
         "10.1093/nc/niac005",
         "10.1038/s41598-022-08975-7",
         "10.3389/fpsyg.2022.911620",
         "10.3389/fnsys.2022.941534"
     ],
-    "Subject Areas":[
-        "MULT", 
-        "MEDI", "NURS", "VETE", "DENT", "HEAL", 
-        "AGRI", "BIOC", "IMMU", "NEUR", "PHAR",
-        "CENG", "CHEM", "COMP", "EART", "ENER", "ENGI", "ENVI", "MATE", "MATH", "PHYS",
-        "ARTS", "BUSI", "DECI", "ECON", "PSYC", "SOCI"
-    ],
-    "Chosen Subject Areas":["PSYC", "NEUR", "MULT"],
+
+    "Subject Areas":{
+        "MULT": "Multidisciplinary",
+        "MEDI": "Medicine",
+        "NURS": "Nursing",
+        "VETE": "Veterinary",
+        "DENT": "Dentistry",
+        "HEAL": "Health Professions",
+        "AGRI": "Agricultural and Biological Sciences",
+        "BIOC": "Biochemistry, Genetics and Molecular Biology",
+        "IMMU": "Immunology and Microbiology",
+        "NEUR": "Neuroscience",
+        "PHAR": "Pharmacology, Toxicology and Pharmaceutics",
+        "CENG": "Chemical Engineering",
+        "CHEM": "Chemistry",
+        "COMP": "Computer Science",
+        "EART": "Earth and Planetary Sciences",
+        "ENER": "Energy",
+        "ENGI": "Engineering",
+        "ENVI": "Environmental Science",
+        "MATE": "Materials Science",
+        "MATH": "Mathematics",
+        "PHYS": "Physics and Astronomy",
+        "ARTS": "Arts and Humanities",
+        "BUSI": "Business, Management and Accounting",
+        "DECI": "Decision Sciences",
+        "ECON": "Economics, Econometrics and Finance",
+        "PSYC": "Psychology",
+        "SOCI": "Social Sciences"
+    },
+
+    "Chosen Subject Areas":{
+        "PSYC": "Psychology", 
+        "NEUR": "Neuroscience", 
+        "MULT": "Multidisciplinary"
+    },
 
     "Search Columns":[
-        "Title", "DOI", "Authors", "Source Title", "Publication Year",
-        "Author Keywords", "Index Keywords", "Affiliations",
-        "Cited By", "Scopus Link", "Abstract", "Funding Details",
+        "Title", "DOI", "Authors", "Source Title", 
+        "Publication Year", "Author Keywords", "Affiliations", 
+        "Cited By",  "Scopus Link", "Abstract", "Funding Details",
         "References", "Publisher", "Abbreviated Source Title"
     ],
+    
     "Harvest Columns":["Harvest ID", "Harvest Datetime"],
     "Search Type Columns":["ToC", "Key Paper"],
     "Notes Columns":["Notes", "Specific Notes", "Included"],
