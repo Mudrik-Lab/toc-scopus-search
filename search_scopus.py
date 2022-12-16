@@ -56,7 +56,7 @@ def _retrieve_abstracts(eids):
 
     # For every provided eid retrieve an abstract
     try:
-        abstracts = [AbstractRetrieval(eid, view='FULL') for eid in eids]
+        abstracts = [AbstractRetrieval(eid, refresh=True, view='FULL') for eid in eids]
     except Exception as err:
         raise Exception('Something went wrong while retrieving abstracts, please contact Scopus') from err
     return abstracts
@@ -109,7 +109,7 @@ def _main_search(theory, paper, publication_years):
 
     # Search by the query
     try:
-        scopus_search = ScopusSearch(query, verbose=True)
+        scopus_search = ScopusSearch(query, refresh=True, verbose=True)
     except Exception as err:
         raise Exception('Something went wrong while performing ScopusSearch, please contact Scopus') from err
 
@@ -212,6 +212,17 @@ def main(path_to_json):
     with open(json_path, 'r') as json_file:
         config = json.load(json_file)
     
+    _columns = {
+        'Search Columns': 14,
+        'Harvest Columns': 2,
+        'Search Type Columns': 2,
+        'Notes Columns': 3,
+        'Filter Columns': 6
+        }
+    # Check that _columns fields sizes are correct
+    for column, size in _columns.items():
+        assert len(config[column]) == size, f'Wrong size of the {column} array, expected size is {size}'
+
     # Load the configuration data
     try:
         theories = {theory_item['ToC']: theory_item['Key Papers'] for theory_item in config['Theories']}
@@ -284,6 +295,10 @@ def main(path_to_json):
 
     # Copy the configuration file
     shutil.copyfile(path_to_json, results_path/f'harvest_configuration_{config["Harvest ID"]}_{harvest_start_time.strftime("%d_%m_%Y")}.json')
+
+    harvest_end_time = datetime.datetime.now()
+    delta = str(harvest_end_time-harvest_start_time)
+    print(f"The harvest's done, elapsed time = {delta} hh:mm:ss")
 
 if __name__ == '__main__':
     main('harvest_configuration.json')
