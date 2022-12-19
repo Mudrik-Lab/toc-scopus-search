@@ -13,7 +13,8 @@ def _filter_by_subject_areas(abstracts, subject_areas, subject_areas_chosen):
     """
 
     # Initialise dictionary in which will be recorded counts for every excluded subject area
-    areas = dict.fromkeys(subject_areas, 0)
+    # Add 'Other' for the papers that aren't from the provided subject areas
+    areas = dict.fromkeys(list(subject_areas)+['Other'], 0)
     new_abstracts = []
     for ab in abstracts:
         # If the abstract's area is one of the chosen - include the abstract.
@@ -22,7 +23,10 @@ def _filter_by_subject_areas(abstracts, subject_areas, subject_areas_chosen):
         # Otherwise, increment count for the area of the abstract.
         else:
             for area in ab.subject_areas:
-                areas[area.abbreviation] += 1
+                if area.abbreviation in subject_areas:
+                    areas[area.abbreviation] += 1
+                else:
+                    areas['Other'] += 1
     return new_abstracts, areas
 
 def _filter_by_methodologies(abstracts, methodologies):
@@ -227,6 +231,8 @@ def main(path_to_json):
     try:
         theories = {theory_item['ToC']: theory_item['Key Papers'] for theory_item in config['Theories']}
         subject_areas = config['Subject Areas']
+        # Add 'Other' for the papers that aren't from the provided subject areas
+        subject_areas['Other'] = 'Other'
         search_columns = config['Search Columns']
         harvest_columns = config['Harvest Columns']
         search_type_columns = config['Search Type Columns']
@@ -291,7 +297,7 @@ def main(path_to_json):
     summary_df.to_csv((results_path/harvest_start_time.strftime("summary_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
     results_df.to_csv((results_path/harvest_start_time.strftime("scopus_search_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
     counts_df.to_csv((results_path/harvest_start_time.strftime("counts_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
-    areas_df.to_csv((results_path/harvest_start_time.strftime("areas_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
+    areas_df.to_csv((results_path/harvest_start_time.strftime("areas_exclusions_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
 
     # Copy the configuration file
     shutil.copyfile(path_to_json, results_path/f'harvest_configuration_{config["Harvest ID"]}_{harvest_start_time.strftime("%d_%m_%Y")}.json')
