@@ -2,19 +2,18 @@ import datetime
 import csv
 import json
 import shutil
+from collections import defaultdict
 from pathlib import Path
 import pandas as pd
-from pybliometrics.scopus import ScopusSearch, AbstractRetrieval
+from pybliometrics.scopus import ScopusSearch, AbstractRetrieval, SubjectClassifications
 
 
-def _filter_by_subject_areas(abstracts, subject_areas, subject_areas_chosen):
+def _filter_by_subject_areas(abstracts, areas_dict, subject_areas_chosen):
     """ Filters abstracts by subject areas, 
     while counting how many papers were excluded per area.
     """
 
     # Initialise dictionary in which will be recorded counts for every excluded subject area
-    # Add 'Other' for the papers that aren't from the provided subject areas
-    areas = dict.fromkeys(list(subject_areas)+['Other'], 0)
     new_abstracts = []
     for ab in abstracts:
         # If the abstract's area is one of the chosen - include the abstract.
@@ -22,12 +21,10 @@ def _filter_by_subject_areas(abstracts, subject_areas, subject_areas_chosen):
             new_abstracts.append(ab)
         # Otherwise, increment count for the area of the abstract.
         else:
-            for area in ab.subject_areas:
-                if area.abbreviation in subject_areas:
-                    areas[area.abbreviation] += 1
-                else:
-                    areas['Other'] += 1
-    return new_abstracts, areas
+            abbreviations = list(set([area.abbreviation for area in ab.subject_areas]))
+            for abbr in abbreviations:
+                areas_dict[abbr] += 1
+    return new_abstracts
 
 def _filter_by_methodologies(abstracts, methodologies):
     """ Filters abstracts by checking if any of provided methodologies 
@@ -60,12 +57,12 @@ def _retrieve_abstracts(eids):
 
     # For every provided eid retrieve an abstract
     try:
-        abstracts = [AbstractRetrieval(eid, refresh=True, view='FULL') for eid in eids]
+        abstracts = [AbstractRetrieval(eid, refresh=True, view='FULL') for eid in eids] 
     except Exception as err:
         raise Exception('Something went wrong while retrieving abstracts, please contact Scopus') from err
     return abstracts
 
-def _filter_abstracts(abstracts, subject_areas, subject_areas_chosen, methodologies, filter_columns, dois):
+def _filter_abstracts(abstracts, areas_dict, subject_areas_chosen, methodologies, filter_columns, dois):
     """ Filters abstracts by language, document type, subject areas, methodologies, dois.
     Records their counts.
     """
@@ -84,7 +81,7 @@ def _filter_abstracts(abstracts, subject_areas, subject_areas_chosen, methodolog
     papers_count[filter_columns[2]] = len(abstracts)
 
     # Filter by subject area
-    abstracts, areas = _filter_by_subject_areas(abstracts, subject_areas, subject_areas_chosen)
+    abstracts = _filter_by_subject_areas(abstracts, areas_dict, subject_areas_chosen)
     papers_count[filter_columns[3]] = len(abstracts)
 
     # Filter by methodology if any were provided
@@ -95,7 +92,7 @@ def _filter_abstracts(abstracts, subject_areas, subject_areas_chosen, methodolog
     abstracts = [ab for ab in abstracts if ab.doi not in dois]
     papers_count[filter_columns[5]] = len(abstracts)
 
-    return abstracts, papers_count, areas
+    return abstracts, papers_count
 
 def _main_search(theory, paper, publication_years):
     """ Main search by query using Scopus Search API.
@@ -163,6 +160,7 @@ def _process_abstracts(abstracts, search, search_df):
 def search_by(
     config, 
     harvest_start_time, 
+    areas_dict,
     theory,
     paper=None
     ):
@@ -172,7 +170,6 @@ def search_by(
     # Load parameters from the config
     try:
         publication_years = config['Publication Years']
-        subject_areas = config['Subject Areas'].keys()
         subject_areas_chosen = config['Chosen Subject Areas'].keys()
         harvest_id = config['Harvest ID']
         search_columns = config['Search Columns']
@@ -187,7 +184,7 @@ def search_by(
 
     scopus_search = _main_search(theory, paper, publication_years)
     abstracts = _retrieve_abstracts(scopus_search.get_eids())
-    abstracts, papers_count, areas = _filter_abstracts(abstracts, subject_areas, subject_areas_chosen, methodologies, filter_columns, dois)
+    abstracts, papers_count = _filter_abstracts(abstracts, areas_dict, subject_areas_chosen, methodologies, filter_columns, dois)
 
     n_papers = len(abstracts)
     # Initialise dataframes for recording data.
@@ -200,7 +197,7 @@ def search_by(
 
     search_results_df = pd.concat([harvest_df, search_df, theory_df, notes_df], axis=1)
     
-    return search_results_df, papers_count, areas
+    return search_results_df, papers_count
 
 def main(path_to_json):
     """ Main
@@ -230,9 +227,6 @@ def main(path_to_json):
     # Load the configuration data
     try:
         theories = {theory_item['ToC']: theory_item['Key Papers'] for theory_item in config['Theories']}
-        subject_areas = config['Subject Areas']
-        # Add 'Other' for the papers that aren't from the provided subject areas
-        subject_areas['Other'] = 'Other'
         search_columns = config['Search Columns']
         harvest_columns = config['Harvest Columns']
         search_type_columns = config['Search Type Columns']
@@ -249,42 +243,31 @@ def main(path_to_json):
         ]
     results_df = pd.DataFrame(columns=columns)
     counts_df = pd.DataFrame(columns=search_type_columns+filter_columns)
-    areas_df = pd.DataFrame(columns=search_type_columns+list(subject_areas.values()))
     
+
+    areas_dict = defaultdict(int)
 
     for theory, key_papers in theories.items():
 
         # Search by theory
-        search_results_df, papers_count, areas = search_by(config, harvest_start_time, theory)
-        # Translate subject area abbreviation to the full name.
-        areas = {subject_areas[area]: count for area, count in areas.items()}
+        search_results_df, papers_count = search_by(config, harvest_start_time, areas_dict, theory)
         # Add results from the search to the main dataframe.
         results_df = pd.concat([results_df, search_results_df], axis=0, ignore_index=True)
         # Add search type column names to the counts dict.
         papers_count.update(dict(zip(search_type_columns, (theory, 'NA'))))
         # Add filtering counts from the search to the count dataframe.
         counts_df = pd.concat([counts_df, pd.DataFrame([papers_count])], axis=0, ignore_index=True)
-        # Add search type column names to the areas dict.
-        areas.update(dict(zip(search_type_columns, (theory, 'NA'))))
-        # Add areas counts from the search to the areas dataframe.
-        areas_df = pd.concat([areas_df, pd.DataFrame([areas])], axis=0, ignore_index=True)
 
         for paper in key_papers:
             
             # Search by key paper
-            search_results_df, papers_count, areas = search_by(config, harvest_start_time, theory, paper)
-            # Translate subject area abbreviation to the full name.
-            areas = {subject_areas[area]: count for area, count in areas.items()}
+            search_results_df, papers_count = search_by(config, harvest_start_time, areas_dict, theory, paper)
             # Add results from the search to the main dataframe.
             results_df = pd.concat([results_df, search_results_df], axis=0, ignore_index=True)
             # Add search type column names to the counts dict.
             papers_count.update(dict(zip(search_type_columns, (theory, paper))))
             # Add filtering counts from the search to the count dataframe.
             counts_df = pd.concat([counts_df, pd.DataFrame([papers_count])], axis=0, ignore_index=True)
-            # Add search type column names to the areas dict.
-            areas.update(dict(zip(search_type_columns, (theory, paper))))
-            # Add areas counts from the search to the areas dataframe.
-            areas_df = pd.concat([areas_df, pd.DataFrame([areas])], axis=0, ignore_index=True)
 
     # Remove DOI duplicates for the summary dataframe
     summary_df = results_df.drop_duplicates(subset=['DOI'])[search_columns+notes_columns]
@@ -297,7 +280,19 @@ def main(path_to_json):
     summary_df.to_csv((results_path/harvest_start_time.strftime("summary_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
     results_df.to_csv((results_path/harvest_start_time.strftime("scopus_search_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
     counts_df.to_csv((results_path/harvest_start_time.strftime("counts_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
-    areas_df.to_csv((results_path/harvest_start_time.strftime("areas_exclusions_%d_%m_%Y")).with_suffix(suffix), index=False, quoting=csv.QUOTE_NONNUMERIC)
+
+    # Sort the dict with subject areas
+    areas_dict = dict(sorted(areas_dict.items()))
+    # Get mapping for subject area full name and its abbreviation
+    areas_description = {area: SubjectClassifications({'abbrev': area}).results[0].description for area in areas_dict.keys()}
+    # Translate to the full names
+    areas = {areas_description[area]: count for area, count in areas_dict.items()}
+    # Write csv
+    with open((results_path/harvest_start_time.strftime("areas_exclusions_%d_%m_%Y")).with_suffix(suffix), 'w', newline='') as f:
+        w = csv.writer(f, )
+        w.writerow(('Subject area', 'Counts'))
+        for row in areas.items():
+            w.writerow(row)
 
     # Copy the configuration file
     shutil.copyfile(path_to_json, results_path/f'harvest_configuration_{config["Harvest ID"]}_{harvest_start_time.strftime("%d_%m_%Y")}.json')

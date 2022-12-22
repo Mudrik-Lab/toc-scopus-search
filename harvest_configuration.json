@@ -51,36 +51,6 @@
         "10.3389/fnsys.2022.941534"
     ],
 
-    "Subject Areas":{
-        "MULT": "Multidisciplinary",
-        "MEDI": "Medicine",
-        "NURS": "Nursing",
-        "VETE": "Veterinary",
-        "DENT": "Dentistry",
-        "HEAL": "Health Professions",
-        "AGRI": "Agricultural and Biological Sciences",
-        "BIOC": "Biochemistry, Genetics and Molecular Biology",
-        "IMMU": "Immunology and Microbiology",
-        "NEUR": "Neuroscience",
-        "PHAR": "Pharmacology, Toxicology and Pharmaceutics",
-        "CENG": "Chemical Engineering",
-        "CHEM": "Chemistry",
-        "COMP": "Computer Science",
-        "EART": "Earth and Planetary Sciences",
-        "ENER": "Energy",
-        "ENGI": "Engineering",
-        "ENVI": "Environmental Science",
-        "MATE": "Materials Science",
-        "MATH": "Mathematics",
-        "PHYS": "Physics and Astronomy",
-        "ARTS": "Arts and Humanities",
-        "BUSI": "Business, Management and Accounting",
-        "DECI": "Decision Sciences",
-        "ECON": "Economics, Econometrics and Finance",
-        "PSYC": "Psychology",
-        "SOCI": "Social Sciences"
-    },
-
     "Chosen Subject Areas":{
         "PSYC": "Psychology", 
         "NEUR": "Neuroscience", 
